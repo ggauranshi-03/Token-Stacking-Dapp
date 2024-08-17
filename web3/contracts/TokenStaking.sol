@@ -193,7 +193,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
      * @notice This function is used to update maximum staking amount
      */
     function updateMaximumStakingAmount(uint256 newAmount) external onlyOwner {
-        _maximumStakingAmount = newAmount;
+        _maxStakeTokenLimit = newAmount;
     }
     /**
      * @notice This function is used to update early unstake fee percentage
