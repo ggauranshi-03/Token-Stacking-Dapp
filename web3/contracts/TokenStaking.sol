@@ -5,6 +5,7 @@ import "./IERC20.sol";
 import "./Ownable.sol";
 import "./ReentrancyGuard.sol";
 contract TokenStaking is Ownable, Reentrancy, Initializable {
+    //This contract, TokenStaking, is designed for a staking mechanism where users can stake tokens and earn rewards based on the time their tokens are staked.
     //STRUCT
     struct User {
         uint256 stakeAmount;
@@ -175,6 +176,9 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
     function getUser(address userAddress) external view returns (User memory) {
         return _users(userAddress);
     }
+    function getTotalUsers() external view returns (uint256) {
+        return _totalUsers;
+    }
     /**
      * @notice This function is used to check if a user is a stakeholder
      * @param _user Address of the user to check
@@ -310,7 +314,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
         );
         emit UnStake(user, _amount);
     }
-    function ClaimReward()
+    function claimReward()
         external
         nonReentrant
         whenTreasuryHasBalance(_users[msg.sender].rewardAmount)
@@ -319,7 +323,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
         uint256 rewardAmount = _users[msg.sender].rewardAmount;
         require(rewardAmount > 0, "TokenStaking: no reward to claim");
         require(IERC20(_tokenAddress).transfer(msg.sender, rewardAmount));
-        _users[msg.sender].rewardAmount = 0; // after transfering the rewad we are updating the _users mapping
+        _users[msg.sender].rewardAmount = 0; // after transfering the reward we are updating the _users mapping
         _users[msg.sender].rewardsClaimedSoFar += rewardAmount;
         emit ClaimReward(msg.sender, rewardAmount);
     }
