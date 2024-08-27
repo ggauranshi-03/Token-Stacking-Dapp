@@ -177,7 +177,7 @@ async function connectMe(_provider) {
     notyf.error(error.message);
   }
 }
-async function stackTokens() {
+async function stakeTokens() {
   try {
     let nTokens = document.getElementById("amount-to-stack-value-new").value;
     if (!nTokens) {
@@ -249,7 +249,7 @@ async function approveTokenSpend(_mint_fee_wei, sClass) {
     })
     .on("receipt", (receipt) => {
       console.log(receipt);
-      stackTokenMain(_mint_fee_wei);
+      stakeTokenMain(_mint_fee_wei);
     })
     .catch((error) => {
       console.log(error);
