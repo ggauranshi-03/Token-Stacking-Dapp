@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
-import "./IERC20.sol";
+import "./Address.sol";
 abstract contract Initializable {
     uint8 private _initialized;
     bool private _initializing;
@@ -8,7 +8,7 @@ abstract contract Initializable {
     modifier initializer() {
         bool isTopLevelCall = !_initializing;
         require(
-            (isTopLevelCall && !_initialized < 1) ||
+            (isTopLevelCall && _initialized < 1) ||
                 (!Address.isContract(address(this)) && _initialized == 1),
             "Initializable contract already initialized"
         );
@@ -35,6 +35,7 @@ abstract contract Initializable {
     }
     modifier onlyInitializing() {
         require(_initializing, "Initializable: contract is not initializing");
+        _;
     }
     function _disableInitializers() internal virtual {
         require(!_initializing, "Initializable: contract is initializing");

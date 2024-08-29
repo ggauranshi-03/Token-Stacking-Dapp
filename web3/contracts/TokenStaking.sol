@@ -2,9 +2,10 @@
 pragma solidity ^0.8.9;
 //IMPORTING CONTRACTS
 import "./IERC20.sol";
+import "./Initializable.sol";
 import "./Ownable.sol";
 import "./ReentrancyGuard.sol";
-contract TokenStaking is Ownable, Reentrancy, Initializable {
+contract TokenStaking is Ownable, ReentrancyGuard, Initializable {
     //This contract, TokenStaking, is designed for a staking mechanism where users can stake tokens and earn rewards based on the time their tokens are staked.
     //STRUCT
     struct User {
@@ -22,7 +23,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
     uint256 _totalUsers;
     uint256 _stakeDays;
     uint256 _earlyUnstakeFeePercentage;
-    uint256 _isStakingPaused;
+    bool _isStakingPaused;
     address private _tokenAddress; //Token contract address
     uint256 _apyRate;
     uint256 public constant PERCENTAGE_DENOMINATOR = 10000;
@@ -41,14 +42,14 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
         _;
     }
     function initialize(
-        address owner,
+        address _owner,
         address _tokenAddress,
         uint256 _apyRate,
         uint256 _minimumStakingAmount,
         uint256 _maxStakeTokenLimit,
         uint256 _stakeStartDate,
-        uit256 _stakeEndDate,
-        uin256 _stakeDays,
+        uint256 _stakeEndDate,
+        uint256 _stakeDays,
         uint256 _earlyUnstakeFeePercentage
     ) public virtual initializer {
         //initializer is from initilizable contract
@@ -65,39 +66,40 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
         );
     }
     function __TokenStaking_init_unchained(
-        _owner,
-        _tokenAddress,
-        _apyRate,
-        _minimumStakingAmount,
-        _maxStakeTokenLimit,
-        _stakeStartDate,
-        _stakeEndDate,
-        _stakeDays,
-        _earlyUnstakeFeePercentage
+        address owner_,
+        address tokenAddress_,
+        uint256 apyRate_,
+        uint256 minimumStakingAmount_,
+        uint256 maxStakeTokenLimit_,
+        uint256 stakeStartDate_,
+        uint256 stakeEndDate_,
+        uint256 stakeDays_,
+        uint256 earlyUnstakeFeePercentage_
     ) internal onlyInitializing {
         require(
-            _apyRate <= 10000,
+            apyRate_ <= 10000,
             "TokenStaking: apy rate should be less than 10000"
         );
-        require(_stakeDays > 0, "TokenStaking: stake days must be non-zero");
+        require(stakeDays_ > 0, "TokenStaking: stake days must be non-zero");
         require(
-            _tokenAddress != address(0),
+            tokenAddress_ != address(0),
             "TokenStaking: token address cannot be 0 address"
         );
         require(
-            _stakeStartDate < _stakeEndDate,
+            stakeStartDate_ < stakeEndDate_,
             "TokenStaking: start date must be less than end date"
         );
-        _transferOwnership(_owner); // _transferOwnership is from ownable contract
-        _tokenAddress = _tokenAddress;
-        _apyRate = _apyRate;
-        _minimumStakingAmount = _minimumStakingAmount;
-        _maxStakeTokenLimit = _maxStakeTokenLimit;
-        _stakeStartDate = _stakeStartDate;
-        _stakeEndDate = _stakeEndDate;
-        _stakeDays = _stakeDays * 1 days;
-        _earlyUnstakeFeePercentage = _earlyUnstakeFeePercentage;
+        _transferOwnership(owner_); // _transferOwnership is from ownable contract
+        _tokenAddress = tokenAddress_;
+        _apyRate = apyRate_;
+        _minimumStakingAmount = minimumStakingAmount_;
+        _maxStakeTokenLimit = maxStakeTokenLimit_;
+        _stakeStartDate = stakeStartDate_;
+        _stakeEndDate = stakeEndDate_;
+        _stakeDays = stakeDays_ * 1 days;
+        _earlyUnstakeFeePercentage = earlyUnstakeFeePercentage_;
     }
+
     /**View methods start */
     /**
      *@notice This function is used to get the minimum staking amount */
@@ -143,7 +145,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
     /**
      * @notice This function is used to get staking status
      */
-    function getStakingStatus() external view returns (uint256) {
+    function getStakingStatus() external view returns (bool) {
         return _isStakingPaused;
     }
     /**
@@ -174,7 +176,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
      * @return User struct
      */
     function getUser(address userAddress) external view returns (User memory) {
-        return _users(userAddress);
+        return _users[userAddress];
     }
     function getTotalUsers() external view returns (uint256) {
         return _totalUsers;
@@ -286,33 +288,34 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
     }
     function unstake(
         uint256 _amount
-    ) external nonReentrant when whenTreasuryHasBalance(_amount) {
+    ) external nonReentrant whenTreasuryHasBalance(_amount) {
         address _user = msg.sender;
         require(_amount != 0, "TokenStaking: amount should be non zero");
-        require(this.isStakeHolder(user), "TokenStaking: not a stakeholder");
+        require(this.isStakeHolder(_user), "TokenStaking: not a stakeholder");
         require(
-            _users[user].stakeAmount >= _amount,
+            _users[_user].stakeAmount >= _amount,
             "TokenStaking: not enough stake to unstake"
         );
-        _calculateRewards(user);
-        if (getCurrentTime() <= _users[user].lastStakeTime + _stakeDays) {
+        _calculateRewards(_user);
+        uint256 feeEarlyUnstake;
+        if (getCurrentTime() <= _users[_user].lastStakeTime + _stakeDays) {
             //if a user wishes to withdraw tokens before the token stake time then he has to pay the fee and he will receive the deducted amount
             feeEarlyUnstake = ((_amount * _earlyUnstakeFeePercentage) /
                 PERCENTAGE_DENOMINATOR);
-            emit EarlyUnStakeFee(user, feeEarlyUnstake);
+            emit EarlyUnStakeFee(_user, feeEarlyUnstake);
         }
         uint256 amountToUnstake = _amount - feeEarlyUnstake;
-        _users[user].stakeAmount -= _amount;
+        _users[_user].stakeAmount -= _amount;
         _totalStakedTokens -= _amount;
-        if (_users[user].stakeAmount == 0) {
+        if (_users[_user].stakeAmount == 0) {
             //if user has not staked then we will del that user
             _totalUsers -= 1;
         }
         require(
-            IERC20(_tokenAddress).transfer(user, amountToUnstake),
+            IERC20(_tokenAddress).transfer(_user, amountToUnstake),
             "TokenStaking: failed to transfer"
         );
-        emit UnStake(user, _amount);
+        emit UnStake(_user, _amount);
     }
     function claimReward()
         external
@@ -330,7 +333,7 @@ contract TokenStaking is Ownable, Reentrancy, Initializable {
     /* User methods end */
     /* Private helper function */
     function _calculateRewards(address _user) private {
-        (uint256 userReward, uin256 currentTime) = _getUserEstimatedRewards(
+        (uint256 userReward, uint256 currentTime) = _getUserEstimatedRewards(
             _user
         );
         _users[_user].rewardAmount += userReward;
