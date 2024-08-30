@@ -26,7 +26,7 @@ async function commonProviderDetector(_provider) {
 async function commonInjectedConnect(_provider, _provider_name) {
   await _provider.enable();
   setWeb3Events(_provider);
-  web3 = new web3(_provider);
+  web3 = new Web3(_provider);
   //Get connected chain id from Ethereum node
   let currentNetworkId = await web3.eth.getChainId();
   currentNetworkId = currentNetworkId.toString();
@@ -37,14 +37,18 @@ async function commonInjectedConnect(_provider, _provider_name) {
   currentAddress = accounts[0].toLowerCase();
   if (currentNetworkId != _NETWORK_ID) {
     notyf.error(
-      `Please connect wallet on ${SELECTED_CONTRACT[_NETWORK_ID].network_name} !`
+      `Please connect wallet on ${SELECT_CONTRACT[_NETWORK_ID].network_name} !`
     );
     return false;
   }
+  console.log("SELECT_CONTRACT[_NETWORK_ID]:", SELECT_CONTRACT[_NETWORK_ID]);
+
   oContractToken = new web3.eth.Contract(
-    SELECTED_CONTRACT[_NETWORK_ID].TOKEN.abi,
-    SELECTED_CONTRACT[_NETWORK_ID].TOKEN.address
+    SELECT_CONTRACT[_NETWORK_ID].TOKEN.abi,
+    SELECT_CONTRACT[_NETWORK_ID].TOKEN.address
   );
+
+  console.log("oContractToken after initialization:", oContractToken);
   return true;
 }
 function setWeb3Events(_provider) {

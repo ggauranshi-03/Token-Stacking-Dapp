@@ -1,7 +1,14 @@
 getSelectedTab; //FUNCTION CALL
 loadInitialData("sevenDays");
 connectMe("metamask_wallet");
-function connectWallet() {}
+let userAddress = Web3.eth.getAccounts();
+userAddress = userAddress[0]; // Use the first account as the current address
+async function connectWallet() {
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  currentAddress = accounts[0];
+  console.log("Connected address:", currentAddress);
+}
+
 function openTab(event, name) {
   console.log(name);
   contractCall = name;
@@ -10,8 +17,14 @@ function openTab(event, name) {
 }
 async function loadInitialData(sClass) {
   console.log(sClass);
+
   try {
+    await connectWallet();
     clearInterval(countDownGlobal);
+    if (!web3Main || !currentAddress) {
+      throw new Error("Web3 or wallet address not initialized.");
+    }
+
     let cObj = new web3Main.eth.Contract(
       SELECT_CONTRACT[_NETWORK_ID].STACKING.abi,
       SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address
@@ -19,6 +32,7 @@ async function loadInitialData(sClass) {
     //ID ELEMENT DATA
     let totalUsers = await cObj.methods.getTotalUsers().call();
     let cApy = await cObj.methods.getAPY().call();
+    console.log("APY", cApy);
     //GET USER
     let userDetail = await cObj.methods.getUser(currentAddress).call();
     const user = {
@@ -41,6 +55,9 @@ async function loadInitialData(sClass) {
     document.getElementById("apy-value-feature").innerHTML = `${cApy}% `;
     //CLASS ELEMENT DATA
     let totalLockedTokens = await cObj.methods.getTotalStakedTokens().call();
+    let earlyUnstakeFee = await cObj.methods
+      .getEarlyUnstakeFeePercentage()
+      .call();
     // ELEMENTS --CLASS
     document.getElementById("total-locked-tokens-value").innerHTML = `${
       totalLockedTokens / 10 ** 18
@@ -50,11 +67,11 @@ async function loadInitialData(sClass) {
       .forEach(function (element) {
         element.innerHTML = `${earlyUnstakeFee / 100} %`;
       });
-    let minStakeAmount = await cobj.methods.getMinimumStakingAmount().call();
+    let minStakeAmount = await cObj.methods.getMinimumStakingAmount().call();
     minStakeAmount = Number(minStakeAmount);
     let minA;
     if (minStakeAmount) {
-      minA = `${((minStakeAmount / 10) * 18).toLocaleString()} ${
+      minA = `${(minStakeAmount / 10 ** 18).toLocaleString()} ${
         SELECT_CONTRACT[_NETWORK_ID].TOKEN.symbol
       }`;
     } else {
@@ -76,9 +93,9 @@ async function loadInitialData(sClass) {
     let isStakingPausedText;
     let startDate = await cObj.methods.getStakeStartDate().call();
     startDate = Number(startDate) * 1000;
-    let endDate = await cobj.methods.getStakeEndDate().call();
+    let endDate = await cObj.methods.getStakeEndDate().call();
     endDate = Number(endDate) * 1000;
-    let stakeDays = await cobj.methods.getStakeDays().call();
+    let stakeDays = await cObj.methods.getStakeDays().call();
     let days = Math.floor(Number(stakeDays) / (3600 * 24));
     let dayDisplay = days > 0 ? days + (days == 1 ? " day, " : "days, ") : "";
     document.querySelectorAll(".Lock-period-value").forEach(function (element) {
@@ -91,6 +108,20 @@ async function loadInitialData(sClass) {
       rewardBal / 10 ** 18
     } ${SELECT_CONTRACT[_NETWORK_ID].TOKEN.symbol}`;
     //USER TOKEN BALANCE
+    console.log("SELECT_CONTRACT[_NETWORK_ID]:", SELECT_CONTRACT[_NETWORK_ID]);
+    if (!web3) {
+      console.log("Web3 is not initialized!");
+    } else {
+      console.log("Web3 is initialized", web3);
+    }
+
+    oContractToken = new web3.eth.Contract(
+      SELECT_CONTRACT[_NETWORK_ID].TOKEN.abi,
+      SELECT_CONTRACT[_NETWORK_ID].TOKEN.address
+    );
+
+    console.log("oContractToken after initialization:", oContractToken);
+    // console.log("oContractToken:", oContractToken);
     let balMainUser = currentAddress
       ? await oContractToken.methods.balanceOf(currentAddress).call()
       : "";
@@ -128,7 +159,8 @@ async function loadInitialData(sClass) {
         "countdown-title-value"
       ).innerHTML = `Staking Starts In`;
     }
-    document.querySelectorAll(".apy-value").forEach(function (element) {
+    document.querySelectorAll(".apy-value").forEach(function (element, index) {
+      console.log(`Element ${index}:`, element);
       element.innerHTML = `${cApy} %`;
     });
   } catch (error) {
