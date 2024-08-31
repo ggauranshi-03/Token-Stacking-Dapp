@@ -668,6 +668,49 @@
     <!--MAIN END-->
 
     <!--SCRIPTS-->
+    <!-- Load the Alchemy SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/alchemy-sdk"></script>
+    <!-- Load Web3 -->
+    <script src="js/web3.min.js"></script>
+
+    <!-- Script to initialize Alchemy and Web3 -->
+    <script>
+      const { Alchemy, Network } = alchemySdk;
+
+      const settings = {
+        apiKey: "C5fOQsnj-e7u75o-U6SUfBFQ689dXmE6", // Replace with your Alchemy API Key.
+        network: Network.ETH_SEPOLIA, // Replace with your network.
+      };
+
+      const alchemy = new Alchemy(settings);
+
+      // Initialize Web3 with Alchemy provider
+      const web3 = new Web3(alchemy.core.provider);
+
+      // Get the current account from MetaMask or any connected wallet
+      async function initializeWallet() {
+        if (window.ethereum) {
+          try {
+            // Request account access
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            const accounts = await web3.eth.getAccounts();
+            const currentAddress = accounts[0];
+            console.log("Wallet connected:", currentAddress);
+            // You can now use currentAddress to interact with your smart contracts
+          } catch (error) {
+            console.error("User denied account access:", error);
+          }
+        } else {
+          console.error(
+            "No Ethereum provider detected. Install MetaMask or another wallet provider."
+          );
+        }
+      }
+
+      // Call this function on page load to ensure the wallet is connected
+      initializeWallet();
+    </script>
+
     <script src="assets/js/vendor/jquery.min.js"></script>
     <script src="assets/js/vendor/popper.min.js"></script>
     <script src="assets/js/vendor/bootstrap.min.js"></script>
@@ -678,7 +721,7 @@
     <script src="assets/js/main.js"></script>
     <script src="assets/vendor/notyf/notyf.min.js"></script>
     <!--WEB3 FUNCTION SCRIPTS-->
-    <script src="js/web3.min.js"></script>
+    <!-- <script src="js/web3.min.js"></script> -->
     <script src="js/header.js"></script>
     <script src="js/common.js"></script>
     <script src="js/index.js"></script>

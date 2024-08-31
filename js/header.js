@@ -1,4 +1,4 @@
-const _NETWORK_ID = 80001;
+const _NETWORK_ID = 11155111;
 let SELECT_CONTRACT = {};
 SELECT_CONTRACT[_NETWORK_ID] = {
   network_name: "Sepolia",
@@ -950,12 +950,12 @@ let contractCall = "sevenDays";
 let currentAddress;
 
 if (typeof window.Web3 !== "undefined") {
-  web3 = new Web3("https://rpc.sepolia.org");
+  web3 = new Web3("https://rpc.ankr.com/eth_sepolia");
   console.log("Web3 initialized:", web3);
 } else {
   console.error("Web3 is not defined.");
 }
-let web3Main = new Web3("https://rpc.sepolia.org");
+let web3Main = new Web3("https://rpc.ankr.com/eth_sepolia");
 var notyf = new Notyf({
   duration: 3000,
   position: { x: "right", y: "bottom" },

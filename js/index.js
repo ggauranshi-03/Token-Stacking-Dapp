@@ -85,7 +85,7 @@ async function loadInitialData(sClass) {
     document
       .querySelectorAll(".Maximum-Staking-Amount")
       .forEach(function (element) {
-        element.innerHTML = `${(10000000).toLocaleString()} ${
+        element.innerHTML = `${(5000).toLocaleString()} ${
           SELECT_CONTRACT[_NETWORK_ID].TOKEN.symbol
         }`;
       });
@@ -160,7 +160,6 @@ async function loadInitialData(sClass) {
       ).innerHTML = `Staking Starts In`;
     }
     document.querySelectorAll(".apy-value").forEach(function (element, index) {
-      console.log(`Element ${index}:`, element);
       element.innerHTML = `${cApy} %`;
     });
   } catch (error) {
@@ -213,81 +212,107 @@ async function stakeTokens() {
   try {
     let nTokens = document.getElementById("amount-to-stack-value-new").value;
     if (!nTokens) {
+      console.log("No tokens entered.");
       return;
     }
+
     if (isNaN(nTokens) || nTokens == 0 || Number(nTokens) < 0) {
       console.log("Invalid token amount!");
       return;
     }
+
     nTokens = Number(nTokens);
     let tokenToTransfer = addDecimal(nTokens, 18);
-    console.log("tokenToTransfer", tokenToTransfer);
+    console.log("Tokens to Transfer:", tokenToTransfer);
+
     let balMainUser = await oContractToken.methods
-      .balanceof(currentAddress)
+      .balanceOf(currentAddress)
       .call();
     balMainUser = Number(balMainUser) / 10 ** 18;
-    console.log("balMainUser", balMainUser);
+    console.log("User Balance:", balMainUser);
+
     if (balMainUser < nTokens) {
       notyf.error(`
-      insufficient tokens on ${SELECT_CONTRACT[_NETWORK_ID].network_name}.\nPlease
-      buy some tokens first!`);
+          Insufficient tokens on ${SELECT_CONTRACT[_NETWORK_ID].network_name}.\nPlease
+          buy some tokens first!`);
       return;
     }
+
     let sClass = getSelectedTab(contractCall);
-    console.log(sClass);
+    console.log("Selected Tab Class:", sClass);
+
     let balMainAllowance = await oContractToken.methods
-      //allowance is a inbuild function
       .allowance(
-        currentAddress, //address of the account that owns the tokens
-        SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address //The address of the account that is allowed to spend tokens on behalf of the owner
+        currentAddress,
+        SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address
       )
-      .call(); // this is for checking that the TokenStaking contract has the permission for staking
+      .call();
+
+    console.log("Allowance:", balMainAllowance);
+
     if (Number(balMainAllowance) < Number(tokenToTransfer)) {
+      console.log(
+        "Allowance is less than token to transfer, calling approveTokenSpend..."
+      );
       approveTokenSpend(tokenToTransfer, sClass);
     } else {
+      console.log("Allowance is sufficient, proceeding with staking...");
       stackTokensHelper(tokenToTransfer, sClass);
     }
   } catch (error) {
-    console.log(error);
+    console.error("Error in stakeTokens:", error);
     notyf.dismiss(notification);
     notyf.error(formatEthErrorMsg(error));
   }
 }
+
 async function approveTokenSpend(_mint_fee_wei, sClass) {
   let gasEstimation;
   try {
+    console.log("Approving token spend...");
+
+    if (!currentAddress) {
+      console.error("No currentAddress found. Cannot approve token spend.");
+      notyf.error("Wallet not connected. Please try again.");
+      return;
+    }
+
     gasEstimation = await oContractToken.methods
       .approve(
         SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address,
         _mint_fee_wei
       )
       .estimateGas({ from: currentAddress });
+
+    console.log("Gas Estimation for approve:", gasEstimation);
+    console.log(
+      "approve",
+      SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address
+    );
+    await oContractToken.methods
+      .approve(
+        SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address,
+        _mint_fee_wei
+      )
+      .send({
+        from: currentAddress,
+        gas: gasEstimation,
+      })
+      .on("transactionHash", (hash) => {
+        console.log("Transaction Hash:", hash);
+      })
+      .on("receipt", (receipt) => {
+        console.log("Approval Receipt:", receipt);
+        stakeTokenMain(_mint_fee_wei, sClass);
+      })
+      .catch((error) => {
+        console.log("Error during approve transaction:", error);
+        notyf.error(formatEthErrorMsg(error));
+      });
   } catch (error) {
-    console.log(error);
+    console.error("Error in approveTokenSpend:", error);
     notyf.error(formatEthErrorMsg(error));
-    return;
   }
-  oContractToken.methods
-    .approve(
-      SELECT_CONTRACT[_NETWORK_ID].STACKING[sClass].address,
-      _mint_fee_wei
-    )
-    .send({
-      from: currentAddress,
-      gas: gasEstimation,
-    })
-    .on("transactionHash", (hash) => {
-      console.log("Transaction Hash:", hash);
-    })
-    .on("receipt", (receipt) => {
-      console.log(receipt);
-      stakeTokenMain(_mint_fee_wei);
-    })
-    .catch((error) => {
-      console.log(error);
-      notyf.error(formatEthErrorMsg(error));
-      return;
-    });
 }
 async function stakeTokenMain(_amount_wei, sClass) {
   let gasEstimation;
