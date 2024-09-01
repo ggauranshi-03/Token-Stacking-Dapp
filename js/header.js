@@ -941,21 +941,48 @@ SELECT_CONTRACT[_NETWORK_ID] = {
     ],
   },
 };
-/* countdown global*/
 let countDownGlobal;
-/* wallet connection */
 let web3;
 let oContractToken;
 let contractCall = "sevenDays";
 let currentAddress;
 
-if (typeof window.Web3 !== "undefined") {
-  web3 = new Web3("https://rpc.ankr.com/eth_sepolia");
-  console.log("Web3 initialized:", web3);
-} else {
-  console.error("Web3 is not defined.");
+// Check for the presence of MetaMask or other wallets
+async function initializeWeb3() {
+  if (window.ethereum) {
+    web3 = new Web3(window.ethereum);
+    try {
+      // Request account access
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      currentAddress = (await web3.eth.getAccounts())[0];
+      console.log("Connected Address:", currentAddress);
+    } catch (error) {
+      console.error("User denied account access:", error);
+    }
+  } else if (typeof window.Web3 !== "undefined") {
+    web3 = new Web3(window.Web3.currentProvider);
+    currentAddress = (await web3.eth.getAccounts())[0];
+    console.log("Web3 initialized with current provider:", currentAddress);
+  } else {
+    // Fallback to a default provider (like Ankr)
+    web3 = new Web3("https://rpc.ankr.com/eth_sepolia");
+    console.log("Web3 initialized with Ankr RPC:", web3);
+  }
+
+  // Initialize Token Contract
+  oContractToken = new web3.eth.Contract(
+    SELECT_CONTRACT[_NETWORK_ID].TOKEN.abi,
+    SELECT_CONTRACT[_NETWORK_ID].TOKEN.address
+  );
+  console.log("Token Contract initialized:", oContractToken);
+
+  // Any other contract initialization logic goes here
 }
+
+initializeWeb3();
+
 let web3Main = new Web3("https://rpc.ankr.com/eth_sepolia");
+
 var notyf = new Notyf({
   duration: 3000,
   position: { x: "right", y: "bottom" },

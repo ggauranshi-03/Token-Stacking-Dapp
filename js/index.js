@@ -257,7 +257,7 @@ async function stakeTokens() {
       approveTokenSpend(tokenToTransfer, sClass);
     } else {
       console.log("Allowance is sufficient, proceeding with staking...");
-      stackTokensHelper(tokenToTransfer, sClass);
+      stakeTokenMain(tokenToTransfer, sClass);
     }
   } catch (error) {
     console.error("Error in stakeTokens:", error);
